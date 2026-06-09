@@ -1,14 +1,24 @@
 package com.codehire.backend.engine;
 
-import com.codehire.backend.database.ProblemDAO;
 import com.codehire.backend.models.TestCase;
+import com.codehire.backend.repositories.TestCaseRepository;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 
+@Service // Tells Spring to take control of this class
 public class JudgeService {
 
-    public static String submitCode(int problemId, String language, String candidateMethodCode) {
+    private final TestCaseRepository testCaseRepository;
 
-        List<TestCase> testCases = ProblemDAO.getTestCasesForProblem(problemId);
+    // Spring automatically injects the database repository here
+    public JudgeService(TestCaseRepository testCaseRepository) {
+        this.testCaseRepository = testCaseRepository;
+    }
+
+    public String submitCode(int problemId, String language, String candidateMethodCode) {
+
+        List<TestCase> testCases = testCaseRepository.findByProblemIdOrderByIdAsc(problemId);
         if (testCases.isEmpty()) return "❌ System Error: No test cases found.";
 
         for (int i = 0; i < testCases.size(); i++) {
@@ -17,9 +27,9 @@ public class JudgeService {
             // 1. CHOOSE THE WRAPPER BASED ON LANGUAGE
             String fullCode = "";
             if (language.equalsIgnoreCase("java")) {
-                fullCode = generateJavaWrapper(candidateMethodCode, tc.inputData);
+                fullCode = generateJavaWrapper(candidateMethodCode, tc.getInputData());
             } else if (language.equalsIgnoreCase("python")) {
-                fullCode = generatePythonWrapper(candidateMethodCode, tc.inputData);
+                fullCode = generatePythonWrapper(candidateMethodCode, tc.getInputData());
             } else {
                 return "❌ Unsupported Language: " + language;
             }
@@ -33,16 +43,16 @@ public class JudgeService {
                     return "Runtime Error on Test Case " + (i + 1) + ":\n" + actualOutput;
                 }
 
-                if (!actualOutput.equals(tc.expectedOutput)) {
+                if (!actualOutput.equals(tc.getExpectedOutput())) {
                     // 1. If it's hidden, give them absolutely nothing to work with.
-                    if (tc.isHidden) {
+                    if (tc.isHidden()) {
                         return "❌ Wrong Answer on Test Case " + (i + 1) + " (Hidden)\n";
                     }
 
                     // 2. If it's visible, give them the full debugging breakdown.
                     return "❌ Wrong Answer on Test Case " + (i + 1) + "\n" +
-                            "Input: " + tc.inputData + "\n" +
-                            "Expected: " + tc.expectedOutput + "\n" +
+                            "Input: " + tc.getInputData() + "\n" +
+                            "Expected: " + tc.getExpectedOutput() + "\n" +
                             "Actual: " + actualOutput;
                 }
 

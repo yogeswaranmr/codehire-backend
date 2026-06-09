@@ -9,12 +9,19 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "http://localhost:4200")
 public class SubmissionController {
 
+    private final JudgeService judgeService;
+
+    // Spring automatically injects the JudgeService here
+    public SubmissionController(JudgeService judgeService) {
+        this.judgeService = judgeService;
+    }
+
     @PostMapping("/run")
     public String runCode(@RequestBody SubmissionRequest request) {
         System.out.println("\n[SERVER] HTTP POST request intercepted at /api/v1/submissions/run");
         System.out.println("[SERVER] Compiling/Running Problem ID: " + request.getProblemId());
 
-        String verdict = JudgeService.submitCode(
+        String verdict = judgeService.submitCode(
                 request.getProblemId(),
                 request.getLanguage(),
                 request.getCode()
